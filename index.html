@@ -11,7 +11,12 @@
 <div class="controls"><label>Weekly contribution (Rp) <input id="rate" type="number" min="0" step="500" value="0"></label><label>Payment weeks <select id="weeks"><option value="4">4 weeks</option><option value="5">5 weeks</option></select></label></div>
 <div class="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="rows"></tbody></table></div>
 <div class="actions"><button id="reset" class="danger">Reset this month</button><button id="install" class="primary" hidden>Install app</button></div>
-</section><div class="notice">Records are saved in this browser on this device. Export CSV regularly for backup. For privacy, do not store sensitive information here. The 20:00 reminder is displayed in the app; automatic background notifications depend on Android/browser support.</div><div class="foot">Class Cash Ledger · Local browser storage</div>
+</section><section class="panel" style="margin-top:16px"><div class="panelhead"><div><b>Class shopping list</b><div class="muted">Plan items, quantities, estimated costs, and shopping status.</div></div><button id="shoppingExport">Export shopping CSV</button></div>
+<div class="controls"><label>Item <input id="shopItem" type="text" placeholder="e.g. drinking water" style="width:150px"></label><label>Quantity <input id="shopQty" type="number" min="1" value="1" style="width:80px"></label><label>Estimated price (Rp) <input id="shopPrice" type="number" min="0" step="500" value="0" style="width:125px"></label><button id="addShop" class="primary">Add item</button></div>
+<div class="panelhead" style="padding-top:0"><div class="muted" id="shopSummary">0 items</div><b id="shopTotal">Estimated total: Rp0</b></div>
+<div class="tablewrap"><table style="min-width:560px"><thead><tr><th>Item</th><th>Qty</th><th>Est. total</th><th>Status</th><th>Action</th></tr></thead><tbody id="shopRows"></tbody></table></div>
+<div class="actions"><button id="clearShop" class="danger">Clear shopping list</button></div></section>
+<div class="notice">Records are saved in this browser on this device. Export CSV regularly for backup. For privacy, do not store sensitive information here. The 20:00 reminder is displayed in the app; automatic background notifications depend on Android/browser support.</div><div class="foot">Class Cash Ledger · Local browser storage</div>
 </main><script>
 (()=>{
 const names=["Amel","Desak","Geraldine","Arya kusuma","Arya puguh","Cakra","Arya pramana","Kinara","Caesar","Gayatri","Sidney"];
@@ -44,6 +49,28 @@ $("rate").onchange=()=>{let r=record();r.rate=Math.max(0,Number($("rate").value)
 $("weeks").onchange=()=>{let r=record();r.weeks=Number($("weeks").value);if(r.weeks===4)Object.keys(r.payments).forEach(k=>{if(k.endsWith("-5"))delete r.payments[k]});save();render()};
 $("reset").onclick=()=>{if(confirm("Delete all payment records for this month?")){delete data[key()];save();render()}};
 $("export").onclick=()=>{let r=record(),lines=[["No","Student",...Array.from({length:r.weeks},(_,i)=>"Week "+(i+1)),"Paid total"]];names.forEach((n,i)=>{let row=[i+1,n],sum=0;for(let w=1;w<=r.weeks;w++){let p=r.payments[i+"-"+w];row.push(p?"Paid":"Pending");if(p)sum+=Number(p.amount??r.rate)||0}row.push(sum);lines.push(row)});let csv=lines.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\r\n");let a=document.createElement("a"),u=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.href=u;a.download="class-cash-"+key()+".csv";a.click();URL.revokeObjectURL(u)};
+
+// Class shopping list. Stored separately from payment records.
+const shoppingKey="class-cash-shopping-v1";
+let shopping=[];try{shopping=JSON.parse(localStorage.getItem(shoppingKey)||"[]")}catch{}
+const saveShopping=()=>localStorage.setItem(shoppingKey,JSON.stringify(shopping));
+function renderShopping(){
+ const body=$("shopRows");body.innerHTML="";let total=0,bought=0;
+ shopping.forEach((item,index)=>{const tr=document.createElement("tr"),name=document.createElement("td"),qty=document.createElement("td"),cost=document.createElement("td"),status=document.createElement("td"),action=document.createElement("td"),check=document.createElement("input"),del=document.createElement("button");
+ name.textContent=item.name;name.style.textAlign="left";qty.textContent=item.qty;cost.textContent=money(item.qty*item.price);total+=item.qty*item.price;
+ check.type="checkbox";check.checked=!!item.bought;check.setAttribute("aria-label","Mark "+item.name+" as bought");check.onchange=()=>{item.bought=check.checked;saveShopping();renderShopping()};status.append(check);
+ del.textContent="Remove";del.className="danger";del.onclick=()=>{shopping.splice(index,1);saveShopping();renderShopping()};action.append(del);
+ if(item.bought){bought++;name.style.textDecoration="line-through";name.style.color="#8290a4"}
+ tr.append(name,qty,cost,status,action);body.append(tr)});
+ $("shopSummary").textContent=shopping.length+" items · "+bought+" bought · "+(shopping.length-bought)+" remaining";
+ $("shopTotal").textContent="Estimated total: "+money(total);
+}
+$("addShop").onclick=()=>{const name=$("shopItem").value.trim(),qty=Math.max(1,Number($("shopQty").value)||1),price=Math.max(0,Number($("shopPrice").value)||0);if(!name){$("shopItem").focus();return}shopping.push({name,qty,price,bought:false});saveShopping();$("shopItem").value="";$("shopQty").value=1;$("shopPrice").value=0;renderShopping()};
+$("shopItem").addEventListener("keydown",e=>{if(e.key==="Enter")$("addShop").click()});
+$("clearShop").onclick=()=>{if(shopping.length&&confirm("Clear the entire class shopping list?")){shopping=[];saveShopping();renderShopping()}};
+$("shoppingExport").onclick=()=>{const lines=[["Item","Quantity","Estimated unit price","Estimated total","Bought"],...shopping.map(x=>[x.name,x.qty,x.price,x.qty*x.price,x.bought?"Yes":"No"])];const csv=lines.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\r\n");const a=document.createElement("a"),u=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.href=u;a.download="class-shopping-list.csv";a.click();URL.revokeObjectURL(u)};
+renderShopping();
+
 let promptEvent;$("install").hidden=true;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();promptEvent=e;$("install").hidden=false});$("install").onclick=async()=>{if(promptEvent){promptEvent.prompt();await promptEvent.userChoice;promptEvent=null;$("install").hidden=true}};
 if("serviceWorker"in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 render();
