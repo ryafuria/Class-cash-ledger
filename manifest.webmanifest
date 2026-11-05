@@ -1,0 +1,14 @@
+{
+  "id": "./",
+  "name": "Class Cash Ledger",
+  "short_name": "Class Cash",
+  "description": "Weekly class cash payment tracker for 11 students.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fa",
+  "theme_color": "#14243c",
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}
+  ]
+}
