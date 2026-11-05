@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#14243c"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><title>Class Cash Ledger</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#17243a;background:#f3f6fa}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1100px;margin:auto;padding:20px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px}.logo{background:#14243c;color:white;border-radius:13px;padding:12px;font-size:22px}h1{font-size:22px;margin:0}.muted{color:#6b7890;font-size:13px}.period{display:flex;gap:8px}select,input,button{font:inherit;border:1px solid #dce3ed;border-radius:10px;padding:10px;background:white;color:#17243a}button{cursor:pointer;font-weight:650}.hero{margin:18px 0;background:linear-gradient(120deg,#14243c,#2d5083);color:white;border-radius:18px;padding:22px;display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.hero h2{margin:0 0 6px}.hero p{margin:0;color:#d3deef}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}.stat,.panel{background:white;border:1px solid #e1e7ef;border-radius:15px;padding:15px}.stat small{color:#6b7890}.stat strong{display:block;font-size:21px;margin-top:5px}.panel{padding:0;overflow:hidden}.panelhead{padding:16px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 16px 14px}.controls label{font-size:13px;color:#65738a}.controls input{width:120px}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{padding:12px 10px;border-top:1px solid #edf0f5;text-align:center;font-size:13px}th{background:#f8fafd;color:#68768c;font-size:11px;text-transform:uppercase}td:first-child,th:first-child{text-align:left;padding-left:16px}.student{font-weight:650}.check{width:36px;height:36px;border-radius:10px;color:#64748b}.check.yes{background:#e5f6ed;border-color:#b8e5cc;color:#16845b}.actions{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid #edf0f5}.primary{background:#3867db;color:white;border-color:#3867db}.danger{color:#b44242}.foot{font-size:12px;color:#748198;padding:16px}.progress{height:8px;background:#edf1f6;border-radius:10px;overflow:hidden;margin-top:8px}.bar{height:100%;background:#16845b;width:0}.notice{background:#f8fafd;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-top:14px;font-size:12px;color:#64748b}
+@media(max-width:650px){.wrap{padding:13px}.stats{grid-template-columns:repeat(2,1fr)}.hero{padding:18px}.stat strong{font-size:18px}}
+</style></head><body><main class="wrap">
+<header class="top"><div class="brand"><div class="logo">▤</div><div><h1>Class Cash Ledger</h1><div class="muted">Weekly class contribution tracker</div></div></div><div class="period"><select id="month" aria-label="Month"></select><select id="year" aria-label="Year"></select></div></header>
+<section class="hero"><div><h2 id="periodTitle">Monthly overview</h2><p>Track all 11 students and weekly payments.</p></div><div>🔔 Daily check reminder: <b>20:00 WITA</b></div></section>
+<section class="stats"><div class="stat"><small>Collected</small><strong id="collected">Rp0</strong></div><div class="stat"><small>Expected</small><strong id="expected">Rp0</strong></div><div class="stat"><small>Payments received</small><strong id="received">0</strong></div><div class="stat"><small>Still pending</small><strong id="pending">0</strong></div></section>
+<section class="panel"><div class="panelhead"><div><b>Student payment list</b><div class="muted">Tap a circle to mark a weekly payment as paid.</div></div><button id="export" class="primary">Export CSV</button></div>
+<div class="controls"><label>Weekly contribution (Rp) <input id="rate" type="number" min="0" step="500" value="0"></label><label>Payment weeks <select id="weeks"><option value="4">4 weeks</option><option value="5">5 weeks</option></select></label></div>
+<div class="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="actions"><button id="reset" class="danger">Reset this month</button><button id="install" class="primary" hidden>Install app</button></div>
+</section><div class="notice">Records are saved in this browser on this device. Export CSV regularly for backup. For privacy, do not store sensitive information here. The 20:00 reminder is displayed in the app; automatic background notifications depend on Android/browser support.</div><div class="foot">Class Cash Ledger · Local browser storage</div>
+</main><script>
+(()=>{
+const names=["Amel","Desak","Geraldine","Arya kusuma","Arya puguh","Cakra","Arya pramana","Kinara","Caesar","Gayatri","Sidney"];
+const months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,"0");
+const storeKey="class-cash-ledger-v1";
+let data={};try{data=JSON.parse(localStorage.getItem(storeKey)||"{}")}catch{}
+const now=new Date();
+months.forEach((m,i)=>$("month").add(new Option(m,i)));
+for(let y=now.getFullYear()-3;y<=now.getFullYear()+5;y++)$("year").add(new Option(y,y));
+$("month").value=now.getMonth();$("year").value=now.getFullYear();
+const key=()=>$("year").value+"-"+pad(Number($("month").value)+1);
+const record=()=>data[key()]||(data[key()]={rate:0,weeks:4,payments:{}});
+const money=n=>"Rp"+Math.round(n||0).toLocaleString("id-ID");
+const save=()=>localStorage.setItem(storeKey,JSON.stringify(data));
+function render(){
+ const r=record();$("periodTitle").textContent=months[+$("month").value]+" "+$("year").value;
+ $("rate").value=r.rate;$("weeks").value=r.weeks;
+ const head=$("head");head.innerHTML="<th>No. / Student</th>";
+ for(let w=1;w<=r.weeks;w++){let th=document.createElement("th");th.textContent="Week "+w;head.append(th)}
+ let th=document.createElement("th");th.textContent="Paid total";head.append(th);
+ const body=$("rows");body.innerHTML="";let count=0,total=0,expected=names.length*r.weeks*r.rate;
+ names.forEach((name,i)=>{let tr=document.createElement("tr"),td=document.createElement("td");td.innerHTML='<span class="muted">'+(i+1)+'. </span><span class="student"></span>';td.querySelector(".student").textContent=name;tr.append(td);let sum=0;
+ for(let w=1;w<=r.weeks;w++){let cell=document.createElement("td"),b=document.createElement("button"),k=i+"-"+w,paid=!!r.payments[k];b.className="check"+(paid?" yes":"");b.textContent=paid?"✓":"○";b.setAttribute("aria-label",name+" week "+w+" "+(paid?"paid":"pending"));b.onclick=()=>{if(r.payments[k])delete r.payments[k];else r.payments[k]={paid:true,amount:Number(r.rate)||0};save();render()};cell.append(b);tr.append(cell);if(paid){count++;sum+=Number(r.payments[k].amount??r.rate)||0}}
+ let totalCell=document.createElement("td");totalCell.textContent=money(sum);tr.append(totalCell);total+=sum;body.append(tr)});
+ const slots=names.length*r.weeks;$("collected").textContent=money(total);$("expected").textContent=money(expected);$("received").textContent=count+" / "+slots;$("pending").textContent=slots-count;
+}
+$("month").onchange=render;$("year").onchange=render;
+$("rate").onchange=()=>{let r=record();r.rate=Math.max(0,Number($("rate").value)||0);Object.values(r.payments).forEach(p=>p.amount=r.rate);save();render()};
+$("weeks").onchange=()=>{let r=record();r.weeks=Number($("weeks").value);if(r.weeks===4)Object.keys(r.payments).forEach(k=>{if(k.endsWith("-5"))delete r.payments[k]});save();render()};
+$("reset").onclick=()=>{if(confirm("Delete all payment records for this month?")){delete data[key()];save();render()}};
+$("export").onclick=()=>{let r=record(),lines=[["No","Student",...Array.from({length:r.weeks},(_,i)=>"Week "+(i+1)),"Paid total"]];names.forEach((n,i)=>{let row=[i+1,n],sum=0;for(let w=1;w<=r.weeks;w++){let p=r.payments[i+"-"+w];row.push(p?"Paid":"Pending");if(p)sum+=Number(p.amount??r.rate)||0}row.push(sum);lines.push(row)});let csv=lines.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(",")).join("\r\n");let a=document.createElement("a"),u=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));a.href=u;a.download="class-cash-"+key()+".csv";a.click();URL.revokeObjectURL(u)};
+let promptEvent;$("install").hidden=true;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();promptEvent=e;$("install").hidden=false});$("install").onclick=async()=>{if(promptEvent){promptEvent.prompt();await promptEvent.userChoice;promptEvent=null;$("install").hidden=true}};
+if("serviceWorker"in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+render();
+})();
+</script></body></html>
